@@ -60,8 +60,7 @@ architecture behavior of DECODER is
     signal write_enable     : std_logic := '0';
     signal write_addr       : std_logic_vector(4 downto 0) := "00000";
     signal write_data, imm  : std_logic_vector(31 downto 0) := (others => '0');
-    signal f7_temp          : std_logic_vector(6 downto 0);
-    signal f3_temp          : std_logic_vector(2 downto 0);
+    signal instr_reg : std_logic_vector(31 downto 0) := (others => '0');
     
 begin
     
@@ -85,8 +84,8 @@ begin
 
             -- Extract fields          
             opcode    <= instr_in(6 downto 0);           
-            f3_temp   <= instr_in(14 downto 12);                    
-            f7_temp   <= instr_in(31 downto 25);   
+            f3   <= instr_in(14 downto 12);                    
+            f7   <= instr_in(31 downto 25);   
             rs1_addr <= instr_in(19 downto 15);
             rs2_addr <= instr_in(24 downto 20);          
             
