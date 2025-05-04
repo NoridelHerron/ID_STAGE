@@ -1,4 +1,4 @@
-----------------------------------------------------------------------------------
+---------------------------------------------------------------------------------- 
 -- Author      : Noridel Herron
 -- Date        : 05/03/2025
 -- Description : Instruction Decode (ID) Stage for 5-Stage RISC-V Pipeline CPU
@@ -30,7 +30,8 @@ entity DECODER is
         reg_data2   : out std_logic_vector(31 downto 0);
 
         -- passthrough
-        instr_out   : out std_logic_vector(31 downto 0)
+        instr_out   : out std_logic_vector(31 downto 0);
+        rd_out      : out std_logic_vector(4 downto 0)
     );
 end DECODER;
 
@@ -60,14 +61,17 @@ architecture behavior of DECODER is
     signal write_enable     : std_logic := '0';
     signal write_addr       : std_logic_vector(4 downto 0) := "00000";
     signal write_data, imm  : std_logic_vector(31 downto 0) := (others => '0');
-    signal instr_reg : std_logic_vector(31 downto 0) := (others => '0');
-    
+    signal instr_reg        : std_logic_vector(31 downto 0) := (others => '0');
+
 begin
-    
+
     -- Register file instantiation
-    regfile_inst : RegisterFile port map ( clk, rst, write_enable, write_addr, write_data, rs1_addr, rs2_addr, read_data1_int, read_data2_int);
-    
-process(clk, rst)
+    regfile_inst : RegisterFile port map (
+        clk, rst, write_enable, write_addr, write_data, 
+        rs1_addr, rs2_addr, read_data1_int, read_data2_int
+    );
+
+    process(clk, rst)
     begin
         if rst = '1' then
             reg_data1 <= (others => '0');
@@ -78,6 +82,7 @@ process(clk, rst)
             f3        <= (others => '0');
             f7        <= (others => '0');
             instr_out <= (others => '0');
+            rd_out    <= (others => '0');
             opcode    <= (others => '0');
             imm       <= (others => '0');
 
@@ -91,6 +96,8 @@ process(clk, rst)
             f7        <= instr_in(31 downto 25);
             rs1_addr  <= instr_in(19 downto 15);
             rs2_addr  <= instr_in(24 downto 20);
+            rd_addr   <= instr_in(11 downto 7);
+            rd_out    <= rd_addr;
 
             -- Decode control signals & immediate
             case instr_in(6 downto 0) is
@@ -136,5 +143,5 @@ process(clk, rst)
             end case;
         end if;
     end process;
-    
+
 end behavior;

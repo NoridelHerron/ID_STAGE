@@ -26,7 +26,8 @@ architecture behavior of tb_DECODER is
             f7          : out std_logic_vector(6 downto 0);
             reg_data1   : out std_logic_vector(31 downto 0);
             reg_data2   : out std_logic_vector(31 downto 0);
-            instr_out   : out std_logic_vector(31 downto 0)
+            instr_out   : out std_logic_vector(31 downto 0);
+            rd_out      : out std_logic_vector(4 downto 0)
         );
     end component;
 
@@ -41,13 +42,14 @@ architecture behavior of tb_DECODER is
     signal reg_data1   : std_logic_vector(31 downto 0);
     signal reg_data2   : std_logic_vector(31 downto 0);
     signal instr_out   : std_logic_vector(31 downto 0);
+    signal rd_out      : std_logic_vector(4 downto 0);
 
     constant clk_period : time := 10 ns;
 
 begin
 
     uut: DECODER
-        port map (clk, rst, instr_in, reg_write, mem_read, mem_write, f3, f7, reg_data1, reg_data2, instr_out);
+        port map (clk, rst, instr_in, reg_write, mem_read, mem_write, f3, f7, reg_data1, reg_data2, instr_out, rd_out);
 
     clk_process : process
     begin
