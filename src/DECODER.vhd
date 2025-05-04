@@ -66,85 +66,75 @@ begin
     
     -- Register file instantiation
     regfile_inst : RegisterFile port map ( clk, rst, write_enable, write_addr, write_data, rs1_addr, rs2_addr, read_data1_int, read_data2_int);
-
-    process(clk, rst)
+    
+process(clk, rst)
     begin
         if rst = '1' then
-            reg_data1 <= "00000000000000000000000000000000";
-            reg_data2 <= "00000000000000000000000000000000";
-            reg_write  <= '0';
-            mem_read   <= '0';
-            mem_write  <= '0';
-            f3         <= (others => '0');
-            f7         <= (others => '0');
-            instr_out  <= (others => '0');
-       
+            reg_data1 <= (others => '0');
+            reg_data2 <= (others => '0');
+            reg_write <= '0';
+            mem_read  <= '0';
+            mem_write <= '0';
+            f3        <= (others => '0');
+            f7        <= (others => '0');
+            instr_out <= (others => '0');
+            opcode    <= (others => '0');
+            imm       <= (others => '0');
+
         elsif rising_edge(clk) then
+            -- Pass through instruction
             instr_out <= instr_in;
 
-            -- Extract fields          
-            opcode    <= instr_in(6 downto 0);           
-            f3   <= instr_in(14 downto 12);                    
-            f7   <= instr_in(31 downto 25);   
-            rs1_addr <= instr_in(19 downto 15);
-            rs2_addr <= instr_in(24 downto 20);          
-            
-            case opcode is
+            -- Extract fields
+            opcode    <= instr_in(6 downto 0);
+            f3        <= instr_in(14 downto 12);
+            f7        <= instr_in(31 downto 25);
+            rs1_addr  <= instr_in(19 downto 15);
+            rs2_addr  <= instr_in(24 downto 20);
+
+            -- Decode control signals & immediate
+            case instr_in(6 downto 0) is
                 when "0110011" => -- R-type
                     reg_write <= '1';
                     mem_read  <= '0';
                     mem_write <= '0';
                     imm       <= (others => '0');
+                    reg_data1 <= read_data1_int;
+                    reg_data2 <= read_data2_int;
 
                 when "0010011" => -- I-type
                     reg_write <= '1';
                     mem_read  <= '0';
                     mem_write <= '0';
                     imm       <= std_logic_vector(resize(signed(instr_in(31 downto 20)), 32));
+                    reg_data1 <= read_data1_int;
+                    reg_data2 <= imm;
 
                 when "0000011" => -- LW
                     reg_write <= '1';
                     mem_read  <= '1';
                     mem_write <= '0';
                     imm       <= std_logic_vector(resize(signed(instr_in(31 downto 20)), 32));
+                    reg_data1 <= read_data1_int;
+                    reg_data2 <= imm;
 
                 when "0100011" => -- SW
                     reg_write <= '0';
                     mem_read  <= '0';
                     mem_write <= '1';
                     imm       <= std_logic_vector(resize(signed(instr_in(31 downto 25) & instr_in(11 downto 7)), 32));
+                    reg_data1 <= read_data1_int;
+                    reg_data2 <= imm;
 
                 when others =>
                     reg_write <= '0';
                     mem_read  <= '0';
                     mem_write <= '0';
                     imm       <= (others => '0');
-            end case;                                         
+                    reg_data1 <= (others => '0');
+                    reg_data2 <= (others => '0');
+            end case;
         end if;
     end process;
-
-    process(read_data1_int, read_data2_int)
-    begin
-        case opcode is
-            when "0110011" =>  -- R-type  
-                reg_data1 <= read_data1_int; 
-                reg_data2 <= read_data2_int;             
-                
-            when "0010011" =>  -- I-type (ADDI, etc.)   
-                reg_data1 <= read_data1_int;            
-                reg_data2 <= imm;              
-
-            when "0000011" =>  -- LW  
-                reg_data1 <= read_data1_int;     
-                reg_data2 <= imm;                      
-
-            when "0100011" =>  -- SW  
-                reg_data1 <= read_data1_int;             
-                reg_data2 <= imm;       
-                
-            when others =>
-                reg_data1 <= "00000000000000000000000000000000";
-                reg_data2 <= "00000000000000000000000000000000";               
-        end case;
-    end process;
+    
 end behavior;
