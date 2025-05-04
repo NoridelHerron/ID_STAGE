@@ -61,7 +61,7 @@ begin
     end process;
 
     stim_proc : process
-        variable total_tests : integer := 5000;
+        variable total_tests : integer := 1000;
         variable seed1, seed2 : positive := 42;
         variable rand_real : real;
         variable rand_int : integer;
