@@ -1,10 +1,11 @@
----------------------------------------------------------------------------------- 
+----------------------------------------------------------------------------------
 -- Author      : Noridel Herron
 -- Date        : 05/03/2025
 -- Description : Instruction Decode (ID) Stage for 5-Stage RISC-V Pipeline CPU
 --               - Extracts opcode, rd, rs1, rs2, funct3, funct7, immediate
 --               - Generates control signals for EX, MEM, WB stages
 --               - Interfaces with register file to fetch operand values
+--               - Accepts writeback data/signals from WB stage
 -- File        : DECODER.vhd
 ----------------------------------------------------------------------------------
 
@@ -17,6 +18,9 @@ entity DECODER is
         clk         : in  std_logic;
         rst         : in  std_logic;
         instr_in    : in  std_logic_vector(31 downto 0);
+        data_in     : in  std_logic_vector(31 downto 0);
+        wb_rd       : in  std_logic_vector(4 downto 0);  -- Writeback destination reg
+        wb_reg_write: in  std_logic;                     -- Writeback enable signal
 
         -- control outputs to EX, MEM, WB       
         reg_write   : out std_logic;
@@ -58,18 +62,12 @@ architecture behavior of DECODER is
     signal rd_addr          : std_logic_vector(4 downto 0);
     signal read_data1_int   : std_logic_vector(31 downto 0);
     signal read_data2_int   : std_logic_vector(31 downto 0);
-    signal write_enable     : std_logic := '0';
-    signal write_addr       : std_logic_vector(4 downto 0) := "00000";
-    signal write_data, imm  : std_logic_vector(31 downto 0) := (others => '0');
-    signal instr_reg        : std_logic_vector(31 downto 0) := (others => '0');
+    signal imm              : std_logic_vector(31 downto 0) := (others => '0');
 
 begin
 
     -- Register file instantiation
-    regfile_inst : RegisterFile port map (
-        clk, rst, write_enable, write_addr, write_data, 
-        rs1_addr, rs2_addr, read_data1_int, read_data2_int
-    );
+    regfile_inst : RegisterFile port map (clk, rst, wb_reg_write, wb_rd, data_in, rs1_addr, rs2_addr, read_data1_int, read_data2_int);
 
     process(clk, rst)
     begin
@@ -89,18 +87,27 @@ begin
         elsif rising_edge(clk) then
             -- Pass through instruction
             instr_out <= instr_in;
-
-            -- Extract fields
-            opcode    <= instr_in(6 downto 0);
-            f3        <= instr_in(14 downto 12);
-            f7        <= instr_in(31 downto 25);
-            rs1_addr  <= instr_in(19 downto 15);
-            rs2_addr  <= instr_in(24 downto 20);
-            rd_addr   <= instr_in(11 downto 7);
-            rd_out    <= rd_addr;
+            -- this will ensure that the initial rd_out will not be undefined
+            if instr_in /= "00000000000000000000000000000000" then
+                opcode    <= instr_in(6 downto 0);
+                f3        <= instr_in(14 downto 12);
+                f7        <= instr_in(31 downto 25);
+                rs1_addr  <= instr_in(19 downto 15);
+                rs2_addr  <= instr_in(24 downto 20);
+                rd_addr   <= instr_in(11 downto 7);
+                rd_out    <= rd_addr;
+            else
+                opcode    <= (others => '0');
+                f3        <= (others => '0');
+                f7        <= (others => '0');
+                rs1_addr  <= (others => '0');
+                rs2_addr  <= (others => '0');
+                rd_addr   <= (others => '0');
+                rd_out    <= (others => '0');
+            end if;
 
             -- Decode control signals & immediate
-            case instr_in(6 downto 0) is
+            case opcode is
                 when "0110011" => -- R-type
                     reg_write <= '1';
                     mem_read  <= '0';

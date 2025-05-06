@@ -1,4 +1,3 @@
-----------------------------------------------------------------------------------
 -- Author      : Noridel Herron
 -- Date        : 05/03/2025
 -- randomized test bench for DECODER.vhd
@@ -19,37 +18,49 @@ architecture behavior of tb_DECODER is
             clk         : in  std_logic;
             rst         : in  std_logic;
             instr_in    : in  std_logic_vector(31 downto 0);
+            data_in     : in  std_logic_vector(31 downto 0);
+            wb_rd       : in  std_logic_vector(4 downto 0);  -- Writeback destination reg
+            wb_reg_write: in  std_logic;                     -- Writeback enable signal
+    
+            -- control outputs to EX, MEM, WB       
             reg_write   : out std_logic;
             mem_read    : out std_logic;
             mem_write   : out std_logic;
             f3          : out std_logic_vector(2 downto 0);
             f7          : out std_logic_vector(6 downto 0);
+    
+            -- register file outputs
             reg_data1   : out std_logic_vector(31 downto 0);
             reg_data2   : out std_logic_vector(31 downto 0);
+    
+            -- passthrough
             instr_out   : out std_logic_vector(31 downto 0);
             rd_out      : out std_logic_vector(4 downto 0)
-        );
+            );
     end component;
 
-    signal clk         : std_logic := '0';
-    signal rst         : std_logic := '1';
-    signal instr_in    : std_logic_vector(31 downto 0) := (others => '0');
-    signal reg_write   : std_logic;
-    signal mem_read    : std_logic;
-    signal mem_write   : std_logic;
-    signal f3          : std_logic_vector(2 downto 0);
-    signal f7          : std_logic_vector(6 downto 0);
-    signal reg_data1   : std_logic_vector(31 downto 0);
-    signal reg_data2   : std_logic_vector(31 downto 0);
-    signal instr_out   : std_logic_vector(31 downto 0);
-    signal rd_out      : std_logic_vector(4 downto 0);
+    signal clk          : std_logic := '0';
+    signal rst          : std_logic := '1';
+    signal instr_in     : std_logic_vector(31 downto 0) := (others => '0');
+    signal reg_write    : std_logic := '0';
+    signal mem_read     : std_logic := '0';
+    signal mem_write    : std_logic:= '0';
+    signal f3           : std_logic_vector(2 downto 0);
+    signal f7           : std_logic_vector(6 downto 0);
+    signal reg_data1    : std_logic_vector(31 downto 0);
+    signal reg_data2    : std_logic_vector(31 downto 0);
+    signal instr_out    : std_logic_vector(31 downto 0);
+    signal rd_out       : std_logic_vector(4 downto 0):= (others => '0');
+    signal wb_rd        : std_logic_vector(4 downto 0) := (others => '0');
+    signal wb_reg_write : std_logic := '0';
+    signal data_in      : std_logic_vector(31 downto 0):= (others => '0');
 
     constant clk_period : time := 10 ns;
 
 begin
 
     uut: DECODER
-        port map (clk, rst, instr_in, reg_write, mem_read, mem_write, f3, f7, reg_data1, reg_data2, instr_out, rd_out);
+        port map (clk, rst, instr_in, data_in, wb_rd, wb_reg_write, reg_write, mem_read, mem_write, f3, f7, reg_data1, reg_data2, instr_out, rd_out);
 
     clk_process : process
     begin
@@ -72,12 +83,21 @@ begin
         variable imm : std_logic_vector(11 downto 0);
         variable pass_count, fail_count : integer := 0;
         variable rtype_fail, itype_fail, lw_fail, sw_fail, other_fail : integer := 0;
+        variable wb_data : std_logic_vector(31 downto 0);
     begin
         rst <= '1';
         wait for clk_period;
         rst <= '0';
         wait for clk_period;
 
+        -- Write to register x3 with random value for functional verification
+        wb_data := std_logic_vector(to_unsigned(12345, 32));
+        wb_rd <= "00011"; -- x3
+        data_in <= wb_data;
+        wb_reg_write <= '1';
+        wait for clk_period;
+        wb_reg_write <= '0';
+        
         for i in 0 to total_tests - 1 loop
             loop
                 uniform(seed1, seed2, rand_real); rd := integer(rand_real * 32.0);
