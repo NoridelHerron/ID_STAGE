@@ -31,7 +31,8 @@ This approach guarantees that even "other" or secondary cases are verified and c
 **TCL Approach**
 - Initial approach, more general just track the pass/fail.
 - If fail value != 0, narrowed it down by adding variables for specific type.
-- Then consider what we should be checking. Like do we need to check the rd? Rd is not used in store and others, so we don't need to add an assertion on that specific type. 
+- Then consider what we should be checking. Like do we need to check the rd? Rd is not used in store and others, so we don't need to add an assertion on that specific type.
+
 **Wave Approach**
 - Add additional signal to store the randomized value I'm trying to get visualization and adjust the delay or clock to make it inline with each other.
 
@@ -46,9 +47,6 @@ This approach guarantees that even "other" or secondary cases are verified and c
 ![Tcl Output – 5000 Cases](images/tcl.png)  
 *All test passed.*
 ### Waveform Example
-- These waveform examples show that `reg_write`, `mem_read`, and `mem_write` update on the rising edge of the clock.  
-- The `f3` field is also correctly extracted based on the instruction input.
-
 ![Waveform Example](images/wave.png)   
 **Observation**
 - When the control signal is 1 (R and I-type(imm)), rd_out = rd_temp.
