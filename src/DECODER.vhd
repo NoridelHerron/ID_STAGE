@@ -34,7 +34,8 @@ entity DECODER is
         reg_data1   : out std_logic_vector(31 downto 0);  -- value in register source 1
         reg_data2   : out std_logic_vector(31 downto 0);  -- value in register source 2 or immediate
 
-        -- passthrough    
+        -- passthrough 
+        store_rs2    : out std_logic_vector(31 downto 0);  -- RS2 value for stores   
         rd_out      : out std_logic_vector(4 downto 0)
     );
 end DECODER;
@@ -107,6 +108,7 @@ begin
                     imm       <= (others => '0');
                     reg_data1 <= read_data1_int;
                     reg_data2 <= read_data2_int;
+                    store_rs2 <= (others => '0');
                     rd_out    <= rd_addr;
 
                 when "0010011" => -- I-type (ALU)
@@ -115,6 +117,7 @@ begin
                     reg_data1 <= read_data1_int;
                     reg_data2 <= imm;
                     rd_out    <= rd_addr;
+                    store_rs2 <= (others => '0');
 
                 when "0000011" => -- I-type (load)
                     op        <= "010";
@@ -122,12 +125,14 @@ begin
                     reg_data1 <= read_data1_int;
                     reg_data2 <= imm;
                     rd_out    <= rd_addr;
+                    store_rs2 <= (others => '0');
 
                 when "0100011" => -- S-type (store)
                     op        <= "011";
                     imm       <= std_logic_vector(resize(signed(instr_in(31 downto 25) & instr_in(11 downto 7)), 32));
                     reg_data1 <= read_data1_int;
                     reg_data2 <= imm;
+                    store_rs2 <= read_data2_int;
                     rd_out    <= (others => '0');
 
                 when others =>
@@ -136,6 +141,7 @@ begin
                     reg_data1 <= (others => '0');
                     reg_data2 <= (others => '0');
                     rd_out    <= (others => '0');
+                    store_rs2 <= (others => '0');
             end case;
         end if;
     end process;

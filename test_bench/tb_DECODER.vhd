@@ -35,7 +35,8 @@ architecture behavior of tb_DECODER is
         reg_data2   : out std_logic_vector(31 downto 0);  -- value in register source 2 or immediate
 
         -- passthrough    
-        rd_out      : out std_logic_vector(4 downto 0)
+        rd_out      : out std_logic_vector(4 downto 0);
+        store_rs2   : out std_logic_vector(31 downto 0)   -- new output for raw rs2 value
     );
     end component;
 
@@ -48,6 +49,7 @@ architecture behavior of tb_DECODER is
     signal reg_data1        : std_logic_vector(31 downto 0);
     signal reg_data2        : std_logic_vector(31 downto 0);
     signal rd_out, rd_tmp   : std_logic_vector(4 downto 0):= (others => '0');
+    signal store_rs2        : std_logic_vector(31 downto 0); -- captured rs2 output for store check
     signal wb_rd            : std_logic_vector(4 downto 0) := (others => '0');
     signal wb_reg_write     : std_logic := '0';
     signal data_in          : std_logic_vector(31 downto 0):= (others => '0');
@@ -55,7 +57,7 @@ architecture behavior of tb_DECODER is
     constant clk_period     : time := 10 ns;
 
 begin
-    uut: DECODER port map (clk, rst, instr_in, data_in, wb_rd, wb_reg_write, op, f3, f7, reg_data1, reg_data2, rd_out);
+    uut: DECODER port map (clk, rst, instr_in, data_in, wb_rd, wb_reg_write, op, f3, f7, reg_data1, reg_data2, rd_out, store_rs2);
 
     -- Clock generation only
     clk_process : process
@@ -88,13 +90,6 @@ begin
         wait for clk_period;
         rst <= '0';
         wait for clk_period;
-
-        wb_data := std_logic_vector(to_unsigned(12345, 32));
-        wb_rd <= "00011";
-        data_in <= wb_data;
-        wb_reg_write <= '1';
-        wait for clk_period;
-        wb_reg_write <= '0';
 
         for i in 0 to total_tests - 1 loop
         
@@ -198,27 +193,38 @@ begin
                     end if;     
                        
                 when 3 =>
+                    -- Write known value to x3 (rs2)
+                    wb_data := std_logic_vector(to_unsigned(12345, 32));
+                    wb_rd <= "00011";  -- x3
+                    data_in <= wb_data;
+                    wb_reg_write <= '1';
+                    wait for clk_period;
+                    wb_reg_write <= '0';
+
+                    wait for 3*clk_period;
+
+                    rs2 := 3;
                     instr := imm(11 downto 5) & std_logic_vector(to_unsigned(rs2, 5)) &
                              std_logic_vector(to_unsigned(rs1, 5)) & "010" &
                              imm(4 downto 0) & "0100011";
                     instr_in <= instr;
-                    
-                    -- give enough time for the module getting tested
+
                     wait until rising_edge(clk);
                     wait until rising_edge(clk);
-                    wait for 1 ns;  -- Let rd_out stabilize
-                    
-                    -- Determine if any pass or fail in S-type
-                    if f3 = "010" and op = "011" then
+                    wait for 1 ns;
+
+                    if f3 = "010" and op = "011" and store_rs2 = wb_data then
                         pass_count := pass_count + 1;
                     else
                         fail_count := fail_count + 1;
                         sw_fail := sw_fail + 1;
+                        if store_rs2 /= wb_data then
+                            assert false report "store_rs2 mismatch: expected " & to_hexstring(wb_data) & 
+                                                " but got " & to_hexstring(store_rs2) severity error;
+                        end if;
                     end if;
-                    
-                    -- Narrow down the bugs
                     if f3 /= "010" then func3_fail := func3_fail + 1; end if;
-                    if op /= "011" then op_fail := op_fail + 1; end if;            
+                    if op /= "011" then op_fail := op_fail + 1; end if;
                     
                 when others =>
                     instr := std_logic_vector(to_unsigned(integer(rand_real * 2.0**32), 32));
