@@ -17,27 +17,25 @@ end tb_DECODER;
 architecture behavior of tb_DECODER is
 
     component DECODER
-        Port (
-        clk         : in  std_logic;
-        rst         : in  std_logic;
-        instr_in    : in  std_logic_vector(31 downto 0);
-        data_in     : in  std_logic_vector(31 downto 0);
-        wb_rd       : in  std_logic_vector(4 downto 0);  -- Writeback destination reg
-        wb_reg_write: in  std_logic;                     -- Writeback enable signal
-
-        -- control outputs to EX, MEM, WB            
-        op          : out std_logic_vector(2 downto 0);  -- opcode control signal
-        f3          : out std_logic_vector(2 downto 0);  -- function 3
-        f7          : out std_logic_vector(6 downto 0);  -- function 7
-
-        -- register file outputs
-        reg_data1   : out std_logic_vector(31 downto 0);  -- value in register source 1
-        reg_data2   : out std_logic_vector(31 downto 0);  -- value in register source 2 or immediate
-
-        -- passthrough    
-        rd_out      : out std_logic_vector(4 downto 0);
-        store_rs2   : out std_logic_vector(31 downto 0)   -- new output for raw rs2 value
-    );
+        Port ( clk         : in  std_logic;
+               rst         : in  std_logic;
+               instr_in    : in  std_logic_vector(31 downto 0);
+               data_in     : in  std_logic_vector(31 downto 0);
+               wb_rd       : in  std_logic_vector(4 downto 0);  -- Writeback destination reg
+               wb_reg_write: in  std_logic;                     -- Writeback enable signal
+        
+               -- control outputs to EX, MEM, WB            
+               op          : out std_logic_vector(2 downto 0);  -- opcode control signal
+               f3          : out std_logic_vector(2 downto 0);  -- function 3
+               f7          : out std_logic_vector(6 downto 0);  -- function 7
+        
+               -- register file outputs
+               reg_data1   : out std_logic_vector(31 downto 0);  -- value in register source 1
+               reg_data2   : out std_logic_vector(31 downto 0);  -- value in register source 2 or immediate
+        
+               -- passthrough    
+               rd_out      : out std_logic_vector(4 downto 0);
+               store_rs2   : out std_logic_vector(31 downto 0));   -- new output for raw rs2 value
     end component;
 
     signal clk              : std_logic := '0';
@@ -73,17 +71,25 @@ begin
 
     -- Test logic and summary reporting
     stim_proc : process
+        -- Number of test (adjustable)
         variable total_tests : integer := 5000;
+        
+        -- For generating values
         variable seed1, seed2 : positive := 42;
         variable rand_real : real;
-        variable rand_int : integer;
-        variable instr : std_logic_vector(31 downto 0);
+        variable rand_int : integer; 
         variable rd, rs1, rs2 : integer;
         variable imm : std_logic_vector(11 downto 0) := (others => '0');
+        
+        -- combined pieces of instruction for debugging purpose
+        variable instr : std_logic_vector(31 downto 0);
+        variable wb_data : std_logic_vector(31 downto 0);
+        
+        -- Keep track pass or fail 
         variable pass_count, fail_count : integer := 0;
         variable rtype_fail, itype_fail, lw_fail, sw_fail, other_fail : integer := 0;
         variable rd_fail, op_fail, func7_fail, func3_fail : integer := 0;
-        variable wb_data : std_logic_vector(31 downto 0);
+        
     begin
         report "TESTBENCH STARTED" severity warning;
         rst <= '1';

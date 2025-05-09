@@ -17,43 +17,42 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity DECODER is
-    Port (
-        clk         : in  std_logic;
-        rst         : in  std_logic;
-        instr_in    : in  std_logic_vector(31 downto 0);
-        data_in     : in  std_logic_vector(31 downto 0);
-        wb_rd       : in  std_logic_vector(4 downto 0);  -- Writeback destination reg
-        wb_reg_write: in  std_logic;                     -- Writeback enable signal
-
-        -- control outputs to EX, MEM, WB            
-        op          : out std_logic_vector(2 downto 0);  -- opcode control signal
-        f3          : out std_logic_vector(2 downto 0);  -- function 3
-        f7          : out std_logic_vector(6 downto 0);  -- function 7
-
-        -- register file outputs
-        reg_data1   : out std_logic_vector(31 downto 0);  -- value in register source 1
-        reg_data2   : out std_logic_vector(31 downto 0);  -- value in register source 2 or immediate
-
-        -- passthrough 
-        store_rs2    : out std_logic_vector(31 downto 0);  -- RS2 value for stores   
-        rd_out      : out std_logic_vector(4 downto 0)
-    );
+    Port ( clk         : in  std_logic;
+           rst         : in  std_logic;
+           -- input coming from the "Instruction Fetch (IF)"
+           instr_in    : in  std_logic_vector(31 downto 0); 
+           -- inputs coming from the "Writeback (WB)"
+           data_in     : in  std_logic_vector(31 downto 0);
+           wb_rd       : in  std_logic_vector(4 downto 0);  -- Writeback destination reg
+           wb_reg_write: in  std_logic;                     -- Writeback enable signal
+    
+           -- control outputs to EX, MEM, WB            
+           op          : out std_logic_vector(2 downto 0);  -- opcode control signal
+           f3          : out std_logic_vector(2 downto 0);  -- function 3
+           f7          : out std_logic_vector(6 downto 0);  -- function 7
+    
+           -- register file outputs
+           reg_data1   : out std_logic_vector(31 downto 0);  -- value in register source 1
+           reg_data2   : out std_logic_vector(31 downto 0);  -- value in register source 2 or immediate
+    
+           -- passthrough 
+           store_rs2    : out std_logic_vector(31 downto 0);  -- RS2 value for stores   
+           rd_out      : out std_logic_vector(4 downto 0));
 end DECODER;
 
 architecture behavior of DECODER is
 
+    -- Internal module
     component RegisterFile
-        Port (
-            clk          : in  std_logic;
-            rst          : in  std_logic;
-            write_enable : in  std_logic;
-            write_addr   : in  std_logic_vector(4 downto 0);
-            write_data   : in  std_logic_vector(31 downto 0);
-            read_addr1   : in  std_logic_vector(4 downto 0);
-            read_addr2   : in  std_logic_vector(4 downto 0);
-            read_data1   : out std_logic_vector(31 downto 0);
-            read_data2   : out std_logic_vector(31 downto 0)
-        );
+        Port ( clk          : in  std_logic;
+               rst          : in  std_logic;
+               write_enable : in  std_logic;
+               write_addr   : in  std_logic_vector(4 downto 0);
+               write_data   : in  std_logic_vector(31 downto 0);
+               read_addr1   : in  std_logic_vector(4 downto 0);
+               read_addr2   : in  std_logic_vector(4 downto 0);
+               read_data1   : out std_logic_vector(31 downto 0);
+               read_data2   : out std_logic_vector(31 downto 0));
     end component;
 
     -- Internal signals
@@ -67,10 +66,8 @@ architecture behavior of DECODER is
 begin
 
     -- Register file instantiation
-    regfile_inst : RegisterFile port map (
-        clk, rst, wb_reg_write, wb_rd, data_in,
-        rs1_addr, rs2_addr, read_data1_int, read_data2_int
-    );
+    regfile_inst : RegisterFile port map ( clk, rst, wb_reg_write, wb_rd, data_in,
+                                rs1_addr, rs2_addr, read_data1_int, read_data2_int);
 
     process(clk, rst)
         variable opcode_v : std_logic_vector(6 downto 0);
@@ -83,9 +80,11 @@ begin
             f7        <= (others => '0');
             rd_out    <= (others => '0');
             imm       <= (others => '0');
+            store_rs2 <= (others => '0');
 
         elsif rising_edge(clk) then
             if instr_in /= "00000000000000000000000000000000" then
+                -- bits slicing
                 opcode_v  := instr_in(6 downto 0);
                 f3        <= instr_in(14 downto 12);
                 f7        <= instr_in(31 downto 25);
@@ -108,7 +107,7 @@ begin
                     imm       <= (others => '0');
                     reg_data1 <= read_data1_int;
                     reg_data2 <= read_data2_int;
-                    store_rs2 <= (others => '0');
+                    store_rs2 <= (others => '0'); 
                     rd_out    <= rd_addr;
 
                 when "0010011" => -- I-type (ALU)
